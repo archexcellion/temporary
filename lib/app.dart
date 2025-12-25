@@ -1,130 +1,239 @@
-// Copyright 2018-present the Flutter authors. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 import 'package:flutter/material.dart';
-import 'supplemental/cut_corners_border.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:reply/router.dart';
 
-import 'backdrop.dart';
-import 'category_menu_page.dart';
 import 'colors.dart';
-import 'home.dart';
-import 'login.dart';
-import 'model/product.dart';
-import 'supplemental/cut_corners_border.dart';
+import 'model/email_store.dart';
+import 'model/router_provider.dart';
 
-// TODO: Convert ShrineApp to stateful widget (104)
-class ShrineApp extends StatefulWidget {
-  const ShrineApp({Key? key}) : super(key: key);
+class ReplyApp extends StatefulWidget {
+  const ReplyApp({Key? key}) : super(key: key);
 
   @override
-  State<ShrineApp> createState() => _ShrineAppState();
+  ReplyAppState createState() => ReplyAppState();
 }
 
-class _ShrineAppState extends State<ShrineApp> {
-  Category _currentCategory = Category.all;
+class ReplyAppState extends State<ReplyApp> {
+  final RouterProvider _replyState = RouterProvider(const ReplyHomePath());
+  final ReplyRouteInformationParser _routeInformationParser =
+      ReplyRouteInformationParser();
+  late final ReplyRouterDelegate _routerDelegate;
 
-  void _onCategoryTap(Category category) {
-    setState(() {
-      _currentCategory = category;
-    });
+  @override
+  void initState() {
+    super.initState();
+    _routerDelegate = ReplyRouterDelegate(replyState: _replyState);
+  }
+
+  @override
+  void dispose() {
+    _routerDelegate.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Shrine',
-      initialRoute: '/login',
-      routes: {
-        '/login': (BuildContext context) => const LoginPage(),
-        // TODO: Change to a Backdrop with a HomePage frontLayer (104)
-        '/': (BuildContext context) => Backdrop(
-              // TODO: Make currentCategory field take _currentCategory (104)
-              currentCategory: _currentCategory,
-              // TODO: Pass _currentCategory for frontLayer (104)
-              frontLayer: HomePage(category: _currentCategory),
-              // TODO: Change backLayer field value to CategoryMenuPage (104)
-              backLayer: CategoryMenuPage(
-                currentCategory: _currentCategory,
-                onCategoryTap: _onCategoryTap,
-              ),
-              frontTitle: const Text('SHRINE'),
-              backTitle: const Text('MENU'),
-            ),
-      },
-      // TODO: Customize the theme (103)
-      theme: _kShrineTheme,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<EmailStore>.value(value: EmailStore()),
+      ],
+      child: Selector<EmailStore, ThemeMode>(
+          selector: (context, emailStore) => emailStore.themeMode,
+          builder: (context, themeMode, child) {
+            return MaterialApp.router(
+              routeInformationParser: _routeInformationParser,
+              routerDelegate: _routerDelegate,
+              themeMode: themeMode,
+              title: 'Reply',
+              darkTheme: _buildReplyDarkTheme(context),
+              theme: _buildReplyLightTheme(context),
+            );
+          }),
     );
   }
 }
 
-// TODO: Build a Shrine Theme (103)
-final ThemeData _kShrineTheme = _buildShrineTheme();
-
-ThemeData _buildShrineTheme() {
-  final ThemeData base = ThemeData.light(useMaterial3: true);
+ThemeData _buildReplyLightTheme(BuildContext context) {
+  final base = ThemeData.light();
   return base.copyWith(
-    colorScheme: base.colorScheme.copyWith(
-      primary: kShrinePink100,
-      onPrimary: kShrineBrown900,
-      secondary: kShrineBrown900,
-      error: kShrineErrorRed,
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: ReplyColors.blue700,
+      modalBackgroundColor: Colors.white.withOpacity(0.7),
     ),
-    textTheme: _buildShrineTextTheme(base.textTheme),
-    textSelectionTheme: const TextSelectionThemeData(
-      selectionColor: kShrinePink100,
+    cardColor: ReplyColors.white50,
+    chipTheme: _buildChipTheme(
+      ReplyColors.blue700,
+      ReplyColors.lightChipBackground,
+      Brightness.light,
     ),
-    appBarTheme: const AppBarTheme(
-      foregroundColor: kShrineBrown900,
-      backgroundColor: kShrinePink100,
+    colorScheme: const ColorScheme.light(
+      primary: ReplyColors.blue700,
+      secondary: ReplyColors.orange500,
+      surface: ReplyColors.white50,
+      error: ReplyColors.red400,
+      onPrimary: ReplyColors.white50,
+      onSecondary: ReplyColors.black900,
+      onBackground: ReplyColors.black900,
+      onSurface: ReplyColors.black900,
+      onError: ReplyColors.black900,
+      background: ReplyColors.blue50,
     ),
-    inputDecorationTheme: const InputDecorationTheme(
-      border: CutCornersBorder(),
-      focusedBorder: CutCornersBorder(
-        borderSide: BorderSide(
-          width: 2.0,
-          color: kShrineBrown900,
-        ),
-      ),
-      floatingLabelStyle: TextStyle(
-        color: kShrineBrown900,
-      ),
+    textTheme: _buildReplyLightTextTheme(base.textTheme),
+    scaffoldBackgroundColor: ReplyColors.blue50,
+    bottomAppBarTheme: const BottomAppBarThemeData(
+      color: ReplyColors.blue700,
     ),
   );
 }
 
-// TODO: Build a Shrine Text Theme (103)
-TextTheme _buildShrineTextTheme(TextTheme base) {
-  return base
-      .copyWith(
-        headlineSmall: base.headlineSmall!.copyWith(
-          fontWeight: FontWeight.w500,
+ThemeData _buildReplyDarkTheme(BuildContext context) {
+  final base = ThemeData.dark();
+  return base.copyWith(
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: ReplyColors.darkDrawerBackground,
+      modalBackgroundColor: Colors.black.withOpacity(0.7),
+    ),
+    cardColor: ReplyColors.darkCardBackground,
+    chipTheme: _buildChipTheme(
+      ReplyColors.blue200,
+      ReplyColors.darkChipBackground,
+      Brightness.dark,
+    ),
+    colorScheme: const ColorScheme.dark(
+      primary: ReplyColors.blue200,
+      secondary: ReplyColors.orange300,
+      surface: ReplyColors.black800,
+      error: ReplyColors.red200,
+      onPrimary: ReplyColors.black900,
+      onSecondary: ReplyColors.black900,
+      onBackground: ReplyColors.white50,
+      onSurface: ReplyColors.white50,
+      onError: ReplyColors.black900,
+      background: ReplyColors.black900,
+    ),
+    textTheme: _buildReplyDarkTextTheme(base.textTheme),
+    scaffoldBackgroundColor: ReplyColors.black900,
+    bottomAppBarTheme: const BottomAppBarThemeData(
+      color: ReplyColors.darkBottomAppBarBackground,
+    ),
+  );
+}
+
+ChipThemeData _buildChipTheme(
+  Color primaryColor,
+  Color chipBackground,
+  Brightness brightness,
+) {
+  return ChipThemeData(
+    backgroundColor: primaryColor.withOpacity(0.12),
+    disabledColor: primaryColor.withOpacity(0.87),
+    selectedColor: primaryColor.withOpacity(0.05),
+    secondarySelectedColor: chipBackground,
+    padding: const EdgeInsets.all(4),
+    shape: const StadiumBorder(),
+    labelStyle: GoogleFonts.workSansTextTheme().bodyMedium!.copyWith(
+          color: brightness == Brightness.dark
+              ? ReplyColors.white50
+              : ReplyColors.black900,
         ),
-        titleLarge: base.titleLarge!.copyWith(
-          fontSize: 18.0,
-        ),
-        bodySmall: base.bodySmall!.copyWith(
-          fontWeight: FontWeight.w400,
-          fontSize: 14.0,
-        ),
-        bodyLarge: base.bodyLarge!.copyWith(
-          fontWeight: FontWeight.w500,
-          fontSize: 16.0,
-        ),
-      )
-      .apply(
-        fontFamily: 'Rubik',
-        displayColor: kShrineBrown900,
-        bodyColor: kShrineBrown900,
-      );
+    secondaryLabelStyle: GoogleFonts.workSansTextTheme().bodyMedium!,
+    brightness: brightness,
+  );
+}
+
+TextTheme _buildReplyLightTextTheme(TextTheme base) {
+  return base.copyWith(
+    headlineMedium: GoogleFonts.workSans(
+      fontWeight: FontWeight.w600,
+      fontSize: 34,
+      letterSpacing: 0.4,
+      height: 0.9,
+      color: ReplyColors.black900,
+    ),
+    headlineSmall: GoogleFonts.workSans(
+      fontWeight: FontWeight.bold,
+      fontSize: 24,
+      letterSpacing: 0.27,
+      color: ReplyColors.black900,
+    ),
+    titleLarge: GoogleFonts.workSans(
+      fontWeight: FontWeight.w600,
+      fontSize: 20,
+      letterSpacing: 0.18,
+      color: ReplyColors.black900,
+    ),
+    titleSmall: GoogleFonts.workSans(
+      fontWeight: FontWeight.w600,
+      fontSize: 14,
+      letterSpacing: -0.04,
+      color: ReplyColors.black900,
+    ),
+    bodyLarge: GoogleFonts.workSans(
+      fontWeight: FontWeight.normal,
+      fontSize: 18,
+      letterSpacing: 0.2,
+      color: ReplyColors.black900,
+    ),
+    bodyMedium: GoogleFonts.workSans(
+      fontWeight: FontWeight.normal,
+      fontSize: 14,
+      letterSpacing: -0.05,
+      color: ReplyColors.black900,
+    ),
+    bodySmall: GoogleFonts.workSans(
+      fontWeight: FontWeight.normal,
+      fontSize: 12,
+      letterSpacing: 0.2,
+      color: ReplyColors.black900,
+    ),
+  );
+}
+
+TextTheme _buildReplyDarkTextTheme(TextTheme base) {
+  return base.copyWith(
+    headlineMedium: GoogleFonts.workSans(
+      fontWeight: FontWeight.w600,
+      fontSize: 34,
+      letterSpacing: 0.4,
+      height: 0.9,
+      color: ReplyColors.white50,
+    ),
+    headlineSmall: GoogleFonts.workSans(
+      fontWeight: FontWeight.bold,
+      fontSize: 24,
+      letterSpacing: 0.27,
+      color: ReplyColors.white50,
+    ),
+    titleLarge: GoogleFonts.workSans(
+      fontWeight: FontWeight.w600,
+      fontSize: 20,
+      letterSpacing: 0.18,
+      color: ReplyColors.white50,
+    ),
+    titleSmall: GoogleFonts.workSans(
+      fontWeight: FontWeight.w600,
+      fontSize: 14,
+      letterSpacing: -0.04,
+      color: ReplyColors.white50,
+    ),
+    bodyLarge: GoogleFonts.workSans(
+      fontWeight: FontWeight.normal,
+      fontSize: 18,
+      letterSpacing: 0.2,
+      color: ReplyColors.white50,
+    ),
+    bodyMedium: GoogleFonts.workSans(
+      fontWeight: FontWeight.normal,
+      fontSize: 14,
+      letterSpacing: -0.05,
+      color: ReplyColors.white50,
+    ),
+    bodySmall: GoogleFonts.workSans(
+      fontWeight: FontWeight.normal,
+      fontSize: 12,
+      letterSpacing: 0.2,
+      color: ReplyColors.white50,
+    ),
+  );
 }
